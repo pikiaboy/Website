@@ -1,7 +1,9 @@
 var population;
+var rocket;
 
 function setup() {
   createCanvas(600,600);
+  rocket = new Rocket();
   population = new Population();
 }
 
@@ -22,8 +24,7 @@ function Population(){
 
   this.run = function(){
     for(var i = 0; i < this.popsize; i++){
-      var force = random(10);
-      this.rockets[i].applyForce(force);
+      this.rockets[i].applyForce(random(10),random(10));
       this.rockets[i].update();
       this.rockets[i].show();
     }
@@ -37,16 +38,16 @@ function Population(){
 
 
 function Rocket(){
-  //Postion of Rocket is in the bottom center
-  this.pos = createVector(width/2, height);
+  //Postion of Rocket is in the center of the screen
+  this.pos = createVector(width/2, height/2);
   //Velocity of Rocket
   this.vel = createVector();
   //Acceleration of Rocket
   this.acc = createVector();
 
   //giving the Rocket Acceleration value of force
-  this.applyForce = function(force){
-    this.acc.add(force);
+  this.applyForce = function(forceX,forceY){
+    this.acc = createVector(forceX,forceY);
   }
 
 
