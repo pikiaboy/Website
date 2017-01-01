@@ -1,105 +1,172 @@
 //Array of total rockets
 var population;
 //Number of rockets in population
-var popSize = 1;
-var tickCount;
+var popSize = 25;
+//Max time for a generation
+var maxTick = 200;
+//Current Time
+var tickCount = 0;
+//Target Rockets are trying to reach
+var target;
+var vectTarget;
+//Max length from rocket to target
+var maxLength = 0;
 //Rocket Test
 var rocket;
 
+
 function setup() {
-  frameRate(20);
-  createCanvas(600,600);
+  //frameRate(30);
+  var canvas = createCanvas(600, 600);
   rocket = new Rocket();
   population = new Population();
-  for(var i = 0; i < popSize; i++){
-    population.rockets[i].applyForce(random(-5,5),random(-5,5));
+  target = ellipse(300, 100, 50, 50);
+  vectTarget = createVector(target.x, target.y);
+
+  //Finding the max distance the rocket can be
+  var leftCornerLength = createVector(target.x, height);
+  var rightCornerLength = createVector(target.x, width);
+
+  if (vectTarget.dist(leftCornerLength) > vectTarget.dist(rightCornerLength)) {
+    maxLength = vectTarget.dist(leftCornerLength);
+  } else if (vectTarget.dist(leftCornerLength) < vectTarget.dist(
+      rightCornerLength)) {
+    maxLength = vectTarget.dist(rightCornerLength);
+  } else {
+    maxLength = vectTarget.dist(rightCornerLength);
   }
+
 }
 
-function draw(){
+function draw() {
   background(0);
-  population.run();
-  tickCount++;
+  ellipse(300, 100, 50, 50);
+  if (tickCount == maxTick) {
+    population.clearPopulation();
+    population.repopulate();
+    tickCount = 0;
+  } else {
+    population.run();
+    tickCount++;
+  }
+
+
 }
 
-function Population(){
+function Population() {
   this.rockets = [];
 
-  for(var i = 0; i < popSize; i++){
+  for (var i = 0; i < popSize; i++) {
     this.rockets[i] = new Rocket();
   }
 
 
   //update and show Rockets
-  this.run = function(){
-    for(var i = 0; i < popSize; i++){
+  this.run = function() {
+    for (var i = 0; i < popSize; i++) {
       //this.rockets[i].applyForce(random(10),random(10));
       this.rockets[i].update();
       this.rockets[i].show();
     }
   }
 
+  //Delete current population
+  this.clearPopulation = function() {
+    for (var i = 0; i < popSize; i++) {
+      delete this.rockets[i];
+    }
+  }
+
+  this.repopulate = function() {
+    for (var i = 0; i < popSize; i++) {
+      this.rockets[i] = new Rocket();
+    }
+  }
 
 
 }
+
+/*
+DNA of rocket.
+Contains the instructions of the rocket
+*/
 
 //DNA should have acceleration for each tick?
 function DNA() {
+  //Array of Accelerations
   this.instructions = [];
-
-  this.instructions[tickCount] = createVector(random(-5,5),random(-5,5));
+  for (var i = 0; i < maxTick; i++) {
+    this.instructions[i] = createVector(random(-1, 1), random(-1, 1));
+  }
 }
 
-function Rocket(){
+/*
+The rocket itself.
+It has a postion, a velocity, and an accleration all of which are vectors
+*/
+
+function Rocket() {
   //Postion of Rocket is in the center of the screen
-  this.pos = createVector(width/2, height/2);
+  this.pos = createVector(width / 2, height * .9);
   //Velocity of Rocket
   this.vel = createVector();
   //Acceleration of Rocket
   this.acc = createVector();
 
+  this.fitness = 0;
+
+  //If crashed, will not update rocket
+  this.crashed = false;
+
   this.DNA = new DNA();
 
-  //giving the Rocket Acceleration value of force
-  this.applyForce = function(forceX,forceY){
-    this.acc = createVector(forceX,forceY);
+  this.calcFitness = function() {
+    this.fitness = this.pos.dist(vectTarget) / 1000;
   }
 
 
-  this.update = function(){
-    //adding Acceleration to Velocity
-    this.vel.add(this.acc);
-    //updating the position according the the Acceleration
-    this.pos.add(this.vel);
-    /*
-    The Acceleration is made 0 since we want an
-    array of vectors to act upon the Rocket
-    */
-    this.acc = 0;
+  //giving the Rocket Acceleration value of force
+  this.applyForce = function(forceX, forceY) {
+    this.acc = createVector(forceX, forceY);
+  }
 
+
+  this.update = function() {
     //keeping the rockets in screen
     //should replace 600 with global variable
-    if(this.pos.x <= 0){
-      this.pos.x = 600;
-    }else if (this.pos.x >= 600) {
-      this.pos.x = 0;
+    if (this.pos.x >= 600 || this.pos.x <= 0) {
+      this.crashed = true;
+      this.calcFitness();
     }
-    if(this.pos.y <= 0){
-      this.pos.y = 600;
-    } else if (this.pos.y >= 600) {
-      this.pos.y = 0;
+    if (this.pos.y >= 600 || this.pos.y <= 0) {
+      this.crashed = true;
+      this.calcFitness();
+    }
+
+    if (this.crashed == false) {
+      this.acc = this.DNA.instructions[tickCount];
+      //adding Acceleration to Velocity
+      this.vel.add(this.acc);
+      //updating the position according the the velocity
+      this.pos.add(this.vel);
     }
   }
 
-  this.show = function () {
+
+  //Draw the position of the rockets
+  this.show = function() {
     push();
     noStroke();
-    fill(255,0,0);
+    if (this.crashed) {
+      fill(random(255), random(255), random(255));
+    } else {
+      fill(255, 0, 0);
+    }
     translate(this.pos.x, this.pos.y);
     rotate(this.vel.heading());
     //The actual Rocket is the center of the rectangle
     rectMode(CENTER);
-    rect(0,0,25,5)
+    rect(0, 0, 25, 5)
     pop();
   }
 }
